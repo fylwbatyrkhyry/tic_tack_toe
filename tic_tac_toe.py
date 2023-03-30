@@ -7,11 +7,9 @@ def next_turn(row, col):
     global player
     if game_btns[row][col]['text'] == "" and check_winner() == False:
         if player == players[0]:
-            # Put player 1 sympol
             game_btns[row][col]['text'] = player
 
             if check_winner() == False:
-                # switch player
                 player = players[1]
                 label.config(text=(players[1] + " turn"))
 
@@ -22,11 +20,9 @@ def next_turn(row, col):
                 label.config(text=("Tie, No Winner!"))
 
         elif player == players[1]:
-            # Put player 2 sympol
             game_btns[row][col]['text'] = player
 
             if check_winner() == False:
-                # switch player
                 player = players[0]
                 label.config(text=(players[0] + " turn"))
 
@@ -38,7 +34,6 @@ def next_turn(row, col):
 
 
 def check_winner():
-    # check all 3 horizontal conditions
     for row in range(3):
         if game_btns[row][0]['text'] == game_btns[row][1]['text'] == game_btns[row][2]['text'] != "":
             game_btns[row][0].config(bg="cyan")
@@ -46,7 +41,6 @@ def check_winner():
             game_btns[row][2].config(bg="cyan")
             return True
 
-    # check all 3 vertical conditions
     for col in range(3):
         if game_btns[0][col]['text'] == game_btns[1][col]['text'] == game_btns[2][col]['text'] != "":
             game_btns[0][col].config(bg="cyan")
@@ -54,7 +48,6 @@ def check_winner():
             game_btns[2][col].config(bg="cyan")
             return True
 
-    # check diagonals conditions
     if game_btns[0][0]['text'] == game_btns[1][1]['text'] == game_btns[2][2]['text'] != "":
         game_btns[0][0].config(bg="cyan")
         game_btns[1][1].config(bg="cyan")
@@ -66,7 +59,6 @@ def check_winner():
         game_btns[2][0].config(bg="cyan")
         return True
 
-    # if there are no empty spaces left
     if check_empty_spaces() == False:
         for row in range(3):
             for col in range(3):

@@ -1,126 +1,166 @@
-from glob import glob
-from tkinter import *
-import random
 
+import sys
+if sys.version_info >= (3, 0):
+  from tkinter import Tk, Button
+  from tkinter.font import Font
+else:
+  from Tkinter import Tk, Button
+  from tkFont import Font
+from copy import deepcopy
 
-def next_turn(row, col):
-    global player
-    if game_btns[row][col]['text'] == "" and check_winner() == False:
-        if player == players[0]:
-            game_btns[row][col]['text'] = player
-
-            if check_winner() == False:
-                player = players[1]
-                label.config(text=(players[1] + " turn"))
-
-            elif check_winner() == True:
-                label.config(text=(players[0] + " wins!"))
-
-            elif check_winner() == 'tie':
-                label.config(text=("Tie, No Winner!"))
-
-        elif player == players[1]:
-            game_btns[row][col]['text'] = player
-
-            if check_winner() == False:
-                player = players[0]
-                label.config(text=(players[0] + " turn"))
-
-            elif check_winner() == True:
-                label.config(text=(players[1] + " wins!"))
-
-            elif check_winner() == 'tie':
-                label.config(text=("Tie, No Winner!"))
-
-
-def check_winner():
-    for row in range(3):
-        if game_btns[row][0]['text'] == game_btns[row][1]['text'] == game_btns[row][2]['text'] != "":
-            game_btns[row][0].config(bg="cyan")
-            game_btns[row][1].config(bg="cyan")
-            game_btns[row][2].config(bg="cyan")
-            return True
-
-    for col in range(3):
-        if game_btns[0][col]['text'] == game_btns[1][col]['text'] == game_btns[2][col]['text'] != "":
-            game_btns[0][col].config(bg="cyan")
-            game_btns[1][col].config(bg="cyan")
-            game_btns[2][col].config(bg="cyan")
-            return True
-
-    if game_btns[0][0]['text'] == game_btns[1][1]['text'] == game_btns[2][2]['text'] != "":
-        game_btns[0][0].config(bg="cyan")
-        game_btns[1][1].config(bg="cyan")
-        game_btns[2][2].config(bg="cyan")
-        return True
-    elif game_btns[0][2]['text'] == game_btns[1][1]['text'] == game_btns[2][0]['text'] != "":
-        game_btns[0][2].config(bg="cyan")
-        game_btns[1][1].config(bg="cyan")
-        game_btns[2][0].config(bg="cyan")
-        return True
-
-    if check_empty_spaces() == False:
-        for row in range(3):
-            for col in range(3):
-                game_btns[row][col].config(bg='red')
-
-        return 'tie'
-
+class Board:
+  
+  def __init__(self,other=None):
+    self.player = 'X'
+    self.opponent = 'O'
+    self.empty = '.'
+    self.size = 3
+    self.fields = {}
+    for y in range(self.size):
+      for x in range(self.size):
+        self.fields[x,y] = self.empty
+    
+    if other:
+      self.__dict__ = deepcopy(other.__dict__)
+      
+  def move(self,x,y):
+    board = Board(self)
+    board.fields[x,y] = board.player
+    (board.player,board.opponent) = (board.opponent,board.player)
+    return board
+  
+  def __minimax(self, player):
+    if self.won():
+      if player:
+        return (-1,None)
+      else:
+        return (+1,None)
+    elif self.tied():
+      return (0,None)
+    elif player:
+      best = (-2,None)
+      for x,y in self.fields:
+        if self.fields[x,y]==self.empty:
+          value = self.move(x,y).__minimax(not player)[0]
+          if value>best[0]:
+            best = (value,(x,y))
+      return best
     else:
+      best = (+2,None)
+      for x,y in self.fields:
+        if self.fields[x,y]==self.empty:
+          value = self.move(x,y).__minimax(not player)[0]
+          if value<best[0]:
+            best = (value,(x,y))
+      return best
+  
+  def best(self):
+    return self.__minimax(True)[1]
+  
+  def tied(self):
+    for (x,y) in self.fields:
+      if self.fields[x,y]==self.empty:
         return False
+    return True
+  
+  def won(self):
+    
+    for y in range(self.size):
+      winning = []
+      for x in range(self.size):
+        if self.fields[x,y] == self.opponent:
+          winning.append((x,y))
+      if len(winning) == self.size:
+        return winning
+    
+    for x in range(self.size):
+      winning = []
+      for y in range(self.size):
+        if self.fields[x,y] == self.opponent:
+          winning.append((x,y))
+      if len(winning) == self.size:
+        return winning
+    
+    winning = []
+    for y in range(self.size):
+      x = y
+      if self.fields[x,y] == self.opponent:
+        winning.append((x,y))
+    if len(winning) == self.size:
+      return winning
+   
+    winning = []
+    for y in range(self.size):
+      x = self.size-1-y
+      if self.fields[x,y] == self.opponent:
+        winning.append((x,y))
+    if len(winning) == self.size:
+      return winning
+    
+    return None
+  
+  def __str__(self):
+    string = ''
+    for y in range(self.size):
+      for x in range(self.size):
+        string+=self.fields[x,y]
+      string+="\n"
+    return string
+        
+class GUI:
 
+  def __init__(self):
+    self.app = Tk()
+    self.app.title('TicTacToe')
+    self.app.resizable(width=False, height=False)
+    self.board = Board()
+    self.font = Font(family="Helvetica", size=32)
+    self.buttons = {}
+    for x,y in self.board.fields:
+      handler = lambda x=x,y=y: self.move(x,y)
+      button = Button(self.app, command=handler, font=self.font, width=2, height=1)
+      button.grid(row=y, column=x)
+      self.buttons[x,y] = button
+    handler = lambda: self.reset()
+    button = Button(self.app, text='reset', command=handler)
+    button.grid(row=self.board.size+1, column=0, columnspan=self.board.size, sticky="WE")
+    self.update()
+    
+  def reset(self):
+    self.board = Board()
+    self.update()
+  
+  def move(self,x,y):
+    self.app.config(cursor="watch")
+    self.app.update()
+    self.board = self.board.move(x,y)
+    self.update()
+    move = self.board.best()
+    if move:
+      self.board = self.board.move(*move)
+      self.update()
+    self.app.config(cursor="")
+            
+  def update(self):
+    for (x,y) in self.board.fields:
+      text = self.board.fields[x,y]
+      self.buttons[x,y]['text'] = text
+      self.buttons[x,y]['disabledforeground'] = 'black'
+      if text==self.board.empty:
+        self.buttons[x,y]['state'] = 'normal'
+      else:
+        self.buttons[x,y]['state'] = 'disabled'
+    winning = self.board.won()
+    if winning:
+      for x,y in winning:
+        self.buttons[x,y]['disabledforeground'] = 'red'
+      for x,y in self.buttons:
+        self.buttons[x,y]['state'] = 'disabled'
+    for (x,y) in self.board.fields:
+      self.buttons[x,y].update()
 
-def check_empty_spaces():
-    spaces = 9
+  def mainloop(self):
+    self.app.mainloop()
 
-    for row in range(3):
-        for col in range(3):
-            if game_btns[row][col]['text'] != "":
-                spaces -= 1
-
-    if spaces == 0:
-        return False
-    else:
-        return True
-
-
-def start_new_game():
-    global player
-    player = random.choice(players)
-
-    label.config(text=(player + " turn"))
-
-    for row in range(3):
-        for col in range(3):
-            game_btns[row][col].config(text="", bg="#F0F0F0")
-
-
-window = Tk()
-window.title("Tic-Tac-Toe Korsat-X-Parmaga")
-
-players = ["x", "o"]
-player = random.choice(players)
-
-game_btns = [
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0]
-]
-
-label = Label(text=(player + " turn"), font=('consolas', 40))
-label.pack(side="top")
-
-restart_btn = Button(text="restart", font=(
-    'consolas', 20), command=start_new_game)
-restart_btn.pack(side="top")
-
-btns_frame = Frame(window)
-btns_frame.pack()
-
-for row in range(3):
-    for col in range(3):
-        game_btns[row][col] = Button(btns_frame, text="", font=('consolas', 50), width=4, height=1,
-                                     command=lambda row=row, col=col: next_turn(row, col))
-        game_btns[row][col].grid(row=row, column=col)
-
-window.mainloop()
+if __name__ == '__main__':
+  GUI().mainloop()
